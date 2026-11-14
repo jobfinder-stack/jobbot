@@ -1,0 +1,36 @@
+name: Telegram bot
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # checks for new Telegram messages about every 5 minutes
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tg-bot
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      # keeps users' emails and the message offset private (not in the public repo)
+      - uses: actions/cache@v4
+        with:
+          path: state.json
+          key: tgstate-${{ github.run_id }}
+          restore-keys: tgstate-
+      - name: Answer new messages
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: python tg_poll.py
